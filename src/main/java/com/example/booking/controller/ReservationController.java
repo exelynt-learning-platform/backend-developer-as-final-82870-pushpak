@@ -1,5 +1,6 @@
 package com.example.booking.controller;
 
+import com.example.booking.dto.ReservationPageResponse;
 import com.example.booking.dto.ReservationRequest;
 import com.example.booking.dto.ReservationResponse;
 import com.example.booking.dto.ReservationStatusRequest;
@@ -35,7 +36,7 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ReservationResponse>> getReservations(
+    public ResponseEntity<ReservationPageResponse> getReservations(
             Authentication authentication,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "10") int size,

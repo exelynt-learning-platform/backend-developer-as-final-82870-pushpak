@@ -49,6 +49,10 @@ public class ReservationControllerTest {
         return login("user", "User@123");
     }
 
+    private String user2Token() throws Exception {
+        return login("user2", "User2@123");
+    }
+
     private ResourceResponse createResource() throws Exception {
         ResourceRequest request = new ResourceRequest(
                 "Test resource" + System.nanoTime(),
@@ -213,7 +217,7 @@ public class ReservationControllerTest {
 
         mockMvc.perform(
                         get("/api/reservations/" + reservation.getId())
-                                .header("Authorization", "Bearer " + adminToken())
+                                .header("Authorization", "Bearer " + userToken())
                 )
                 .andExpect(status().isOk());
     }
@@ -340,7 +344,7 @@ public class ReservationControllerTest {
                         patch("/api/reservations/" + reservation.getId() + "/status")
                                 .header("Authorization", "Bearer " + userToken())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"status\":\"CONFIRMED\"}")
+                                .content("{\"reservationStatus\":\"CONFIRMED\"}")
                 )
                 .andExpect(status().isForbidden());
     }

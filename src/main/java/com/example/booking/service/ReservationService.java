@@ -1,5 +1,6 @@
 package com.example.booking.service;
 
+import com.example.booking.dto.ReservationPageResponse;
 import com.example.booking.dto.ReservationRequest;
 import com.example.booking.dto.ReservationResponse;
 import com.example.booking.entity.Reservation;
@@ -13,6 +14,7 @@ import com.example.booking.exception.ResourceNotFoundException;
 import com.example.booking.repository.ReservationRepository;
 import com.example.booking.repository.ResourceRepository;
 import com.example.booking.repository.UserRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -95,7 +97,7 @@ public class ReservationService {
         return mapToResponse(savedReservation);
     }
 
-    public List<ReservationResponse> getAllReservations(String username, boolean isAdmin, int page, int size, ReservationStatus reservationStatus, BigDecimal minPrice, BigDecimal maxPrice, String sortBy, String direction) {
+    public ReservationPageResponse getAllReservations(String username, boolean isAdmin, int page, int size, ReservationStatus reservationStatus, BigDecimal minPrice, BigDecimal maxPrice, String sortBy, String direction) {
         if(page < 0) {
             throw new BadRequestException(
                     "Page must be greater than or equal to 0"
@@ -120,12 +122,9 @@ public class ReservationService {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
+        Page<Reservation> reservationPage;
         if(isAdmin) {
-            return reservationRepository.findReservations(reservationStatus, minPrice, maxPrice, pageable)
-                    .getContent()
-                    .stream()
-                    .map(this::mapToResponse)
-                    .toList();
+            reservationPage = reservationRepository.findReservations(reservationStatus, minPrice, maxPrice, pageable);
         } else {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() ->
@@ -134,12 +133,22 @@ public class ReservationService {
                             )
                     );
 
-            return reservationRepository.findUserWithFilter(user.getId(), reservationStatus, minPrice, maxPrice, pageable)
-                    .getContent()
-                    .stream()
-                    .map(this::mapToResponse)
-                    .toList();
+            reservationPage = reservationRepository.findUserWithFilter(user.getId(), reservationStatus, minPrice, maxPrice, pageable);
         }
+
+        List<ReservationResponse> reservations =
+                reservationPage.getContent()
+                        .stream()
+                        .map(this::mapToResponse)
+                        .toList();
+
+        return new ReservationPageResponse(
+                reservations,
+                reservationPage.getNumber(),
+                reservationPage.getSize(),
+                reservationPage.getTotalElements(),
+                reservationPage.getTotalPages()
+        );
     }
 
     public ReservationResponse getReservationById(Long id, String username, boolean isAdmin) {
