@@ -500,6 +500,34 @@ public class ReservationControllerTest {
     }
 
     @Test
+    void shouldRejectInvalidSortField() throws Exception {
+
+        mockMvc.perform(
+                        get("/api/reservations")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .param("sortBy", "password")
+                                .param("direction", "ASC")
+                                .header("Authorization", "Bearer " + userToken())
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectInvalidSortDirection() throws Exception {
+
+        mockMvc.perform(
+                        get("/api/reservations")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .param("sortBy", "price")
+                                .param("direction", "INVALID")
+                                .header("Authorization", "Bearer " + userToken())
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void statusFilterShouldReturn200() throws Exception {
         mockMvc.perform(
                         get("/api/reservations")

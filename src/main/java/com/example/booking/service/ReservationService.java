@@ -23,9 +23,18 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ReservationService {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id",
+            "startTime",
+            "endTime",
+            "price",
+            "reservationStatus"
+    );
 
     private static final List<ReservationStatus> ACTIVE_STATUSES = List.of(
             ReservationStatus.PENDING,
@@ -43,8 +52,11 @@ public class ReservationService {
     }
 
     public ReservationResponse createReservation(ReservationRequest request, String username) {
-        validateTimeRange(request.getStartTime(), request.getEndTime());
-
+        if(!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BadRequestException(
+                    "End time must be after start time"
+            );
+        }
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() ->
                         new BadRequestException("Authenticated user not found")
@@ -83,14 +95,37 @@ public class ReservationService {
         return mapToResponse(savedReservation);
     }
 
-    public List<Reservation> getAllReservations(String username, boolean isAdmin, int pageNo, int pageSize, ReservationStatus reservationStatus, BigDecimal minPrice, BigDecimal maxPrice, String sortBy, String sortDir) {
-        validatePagination(pageNo, pageSize);
-        validatePriceRange(minPrice, maxPrice);
+    public List<ReservationResponse> getAllReservations(String username, boolean isAdmin, int page, int size, ReservationStatus reservationStatus, BigDecimal minPrice, BigDecimal maxPrice, String sortBy, String direction) {
+        if(page < 0) {
+            throw new BadRequestException(
+                    "Page must be greater than or equal to 0"
+            );
+        }
+        if(size < 1) {
+            throw new BadRequestException(
+                    "Page size must be greater than or equal to 1"
+            );
+        }
+        if(minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Minimum price cannot be negative");
+        }
+        if(maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Maximum price cannot be negative");
+        }
+        if(minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new BadRequestException("Minimum price cannot be greater than maximum price");
+        }
 
-        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+        Sort sort = createSort(sortBy, direction);
+
+        Pageable pageable = PageRequest.of(page, size, sort);
 
         if(isAdmin) {
-            return reservationRepository.findReservations(reservationStatus, minPrice, maxPrice, pageable).getContent();
+            return reservationRepository.findReservations(reservationStatus, minPrice, maxPrice, pageable)
+                    .getContent()
+                    .stream()
+                    .map(this::mapToResponse)
+                    .toList();
         } else {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() ->
@@ -99,7 +134,11 @@ public class ReservationService {
                             )
                     );
 
-            return reservationRepository.findUserWithFilter(user.getId(), reservationStatus, minPrice, maxPrice, pageable).getContent();
+            return reservationRepository.findUserWithFilter(user.getId(), reservationStatus, minPrice, maxPrice, pageable)
+                    .getContent()
+                    .stream()
+                    .map(this::mapToResponse)
+                    .toList();
         }
     }
 
@@ -130,7 +169,11 @@ public class ReservationService {
     }
 
     public ReservationResponse updateReservation(Long id, ReservationRequest request, String username, boolean isAdmin) {
-        validateTimeRange(request.getStartTime(), request.getEndTime());
+        if(!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BadRequestException(
+                    "End time must be after start time"
+            );
+        }
         Reservation reservation = getReservationEntity(id, username, isAdmin);
 
         Resource resource = resourceRepository.findById(request.getResourceId())
@@ -231,37 +274,34 @@ public class ReservationService {
                     );
         }
     }
-    private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
-        if(!endTime.isAfter(startTime)) {
-            throw new BadRequestException(
-                    "End time must be after start time"
-            );
-        }
-    }
 
-    private void validatePagination(int pageNo, int pageSize) {
-        if(pageNo < 0) {
+    private Sort createSort(String sortBy, String direction) {
+        if(sortBy == null || sortBy.isBlank()){
             throw new BadRequestException(
-                    "Page must be greater than or equal to 0"
+                    "Sort field is required"
             );
         }
-        if(pageSize < 1) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
             throw new BadRequestException(
-                    "Page size must be greater than or equal to 1"
+                    "Invalid sort field: " + sortBy
             );
         }
-    }
 
-    private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
-        if(minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Minimum price cannot be negative");
+        if (direction == null || direction.isBlank()) {
+            throw new BadRequestException(
+                    "Sort direction is required"
+            );
         }
-        if(maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Maximum price cannot be negative");
+        Sort.Direction sortDirection;
+
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(
+                    "Sort direction must be ASC or DESC"
+            );
         }
-        if(minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
-            throw new BadRequestException("Minimum price cannot be greater than maximum price");
-        }
+        return Sort.by(sortDirection, sortBy);
     }
 
     private BigDecimal calculatePrice(BigDecimal pricePerHour, LocalDateTime startTime, LocalDateTime endTime) {

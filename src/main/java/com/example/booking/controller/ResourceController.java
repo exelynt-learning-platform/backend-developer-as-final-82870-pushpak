@@ -30,13 +30,13 @@ public class ResourceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Resource>> getAllResources(
-            @RequestParam(required = false, defaultValue = "0") int pageNo,
-            @RequestParam(required = false, defaultValue = "5") int pageSize,
+    public ResponseEntity<List<ResourceResponse>> getAllResources(
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "5") int size,
             @RequestParam(required = false, defaultValue = "id") String sortBy,
-            @RequestParam(required = false, defaultValue = "ASC") String sortDir
+            @RequestParam(required = false, defaultValue = "ASC") String direction
     ) {
-        List<Resource> resources = resourceService.getAllResources(pageNo, pageSize, sortBy, sortDir);
+        List<ResourceResponse> resources = resourceService.getAllResources(page, size, sortBy, direction);
         return ResponseEntity.ok(resources);
     }
 

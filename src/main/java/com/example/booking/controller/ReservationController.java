@@ -35,15 +35,15 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Reservation>> getReservations(
+    public ResponseEntity<List<ReservationResponse>> getReservations(
             Authentication authentication,
-            @RequestParam(required = false, defaultValue = "0") int pageNo,
-            @RequestParam(required = false, defaultValue = "10") int pageSize,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size,
             @RequestParam(required = false) ReservationStatus status,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDir
+            @RequestParam(defaultValue = "ASC") String direction
     ) {
         boolean isAdmin = authentication.getAuthorities()
                 .stream().anyMatch(authority -> Objects.equals(authority.getAuthority(), "ROLE_ADMIN"));
@@ -52,13 +52,13 @@ public class ReservationController {
                 reservationService.getAllReservations(
                         authentication.getName(),
                         isAdmin,
-                        pageNo,
-                        pageSize,
+                        page,
+                        size,
                         status,
                         minPrice,
                         maxPrice,
                         sortBy,
-                        sortDir
+                        direction
                 )
         );
     }
@@ -83,7 +83,7 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.updateReservation(id, request, authentication.getName(), isAdmin));
     }
 
-    @PutMapping("/{id}/status")
+    @PatchMapping("/{id}/status")
     public ResponseEntity<ReservationResponse> updateReservationStatus(
             @PathVariable Long id, @Valid @RequestBody ReservationStatusRequest request
             ) {

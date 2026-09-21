@@ -39,25 +39,31 @@ public class ResourceService {
         return mapToResponse(savedResource);
     }
 
-    public List<Resource> getAllResources(int pageNo, int pageSize, String sortBy, String sortDir) {
-        validatePagination(pageNo, pageSize);
-
+    public List<ResourceResponse> getAllResources(int page, int size, String sortBy, String direction) {
+        if(page < 0){
+            throw new BadRequestException(
+                    "Page number must be greater than or equal to 0"
+            );
+        }
+        if(size < 1) {
+            throw new BadRequestException(
+                    "Page size must be greater than 0"
+            );
+        }
         if(!ALLOWED_SORT_FIELDS.contains(sortBy)) {
             throw new BadRequestException(
                     "Invalid sort field. Allowed fields " + ALLOWED_SORT_FIELDS
             );
         }
 
-        Pageable pageable;
-        try{
-            pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException(
-                    "Sort direction must be ASC or DESC"
-            );
-        }
+        Sort sort = createSort(sortBy, direction);
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-        return resourceRepository.findAll(pageable).getContent();
+        return resourceRepository.findAll(pageable)
+                .getContent()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public ResourceResponse getResourceById(Long id) {
@@ -93,6 +99,35 @@ public class ResourceService {
 
         resourceRepository.delete(resource);
     }
+
+    private Sort createSort(String sortBy, String direction) {
+        if(sortBy == null || sortBy.isBlank()){
+            throw new BadRequestException(
+                    "Sort field is required"
+            );
+        }
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            throw new BadRequestException(
+                    "Invalid sort field: " + sortBy
+            );
+        }
+
+        if (direction == null || direction.isBlank()) {
+            throw new BadRequestException(
+                    "Sort direction is required"
+            );
+        }
+        Sort.Direction sortDirection;
+
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(
+                    "Sort direction must be ASC or DESC"
+            );
+        }
+        return Sort.by(sortDirection, sortBy);
+    }
     private ResourceResponse mapToResponse(Resource resource) {
         return new ResourceResponse(
                 resource.getId(),
@@ -104,16 +139,4 @@ public class ResourceService {
         );
     }
 
-    private void validatePagination(int pageNo, int pageSize) {
-        if(pageNo < 0){
-            throw new BadRequestException(
-                    "Page number must be greater than or equal to 0"
-            );
-        }
-        if(pageSize < 1) {
-            throw new BadRequestException(
-                    "Page size must be greater than 0"
-            );
-        }
-    }
 }
