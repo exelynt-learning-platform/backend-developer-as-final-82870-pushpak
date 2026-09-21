@@ -14,7 +14,7 @@ public class DataInitializer {
     @Bean
     CommandLineRunner initializeUsers(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if(userRepository.existsByUsername("admin")) {
+            if(!userRepository.existsByUsername("admin")) {
                 User admin = new User(
                         "admin",
                         passwordEncoder.encode("Admin@123"),
@@ -22,7 +22,7 @@ public class DataInitializer {
                 );
                 userRepository.save(admin);
             }
-            if(userRepository.existsByUsername("user")) {
+            if(!userRepository.existsByUsername("user")) {
                 User user = new User(
                         "user",
                         passwordEncoder.encode("User@123"),
