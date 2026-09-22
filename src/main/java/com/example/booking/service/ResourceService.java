@@ -20,6 +20,7 @@ import java.util.Set;
 @Service
 public class ResourceService {
 
+    private static final int MAX_PAGE_SIZE = 100;
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "id", "name", "type", "available", "pricePerHour"
     );
@@ -52,6 +53,11 @@ public class ResourceService {
         if(size < 1) {
             throw new BadRequestException(
                     "Page size must be greater than 0"
+            );
+        }
+        if(size > MAX_PAGE_SIZE) {
+            throw new BadRequestException(
+                    "Page size must not exceed " + MAX_PAGE_SIZE
             );
         }
         if(!ALLOWED_SORT_FIELDS.contains(sortBy)) {
@@ -112,34 +118,6 @@ public class ResourceService {
         resourceRepository.delete(resource);
     }
 
-    private Sort createSort(String sortBy, String direction) {
-        if(sortBy == null || sortBy.isBlank()){
-            throw new BadRequestException(
-                    "Sort field is required"
-            );
-        }
-        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
-            throw new BadRequestException(
-                    "Invalid sort field: " + sortBy
-            );
-        }
-
-        if (direction == null || direction.isBlank()) {
-            throw new BadRequestException(
-                    "Sort direction is required"
-            );
-        }
-        Sort.Direction sortDirection;
-
-        try {
-            sortDirection = Sort.Direction.fromString(direction);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException(
-                    "Sort direction must be ASC or DESC"
-            );
-        }
-        return Sort.by(sortDirection, sortBy);
-    }
     private ResourceResponse mapToResponse(Resource resource) {
         return new ResourceResponse(
                 resource.getId(),

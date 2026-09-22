@@ -31,6 +31,7 @@ import java.util.Set;
 @Service
 public class ReservationService {
 
+    private static final int MAX_PAGE_SIZE = 100;
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "id",
             "startTime",
@@ -300,6 +301,12 @@ public class ReservationService {
         if (size <= 0) {
             throw new BadRequestException(
                     "Size must be greater than zero");
+        }
+
+        if(size > MAX_PAGE_SIZE) {
+            throw new BadRequestException(
+                    "Page size must not exceed " + MAX_PAGE_SIZE
+            );
         }
 
         if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {

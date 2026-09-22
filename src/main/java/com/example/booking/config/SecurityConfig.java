@@ -64,32 +64,32 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/auth/login").permitAll()
+
                         .requestMatchers(
-                                "/auth/login",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/resources/**"
-                        ).hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/resources/**")
+                        .hasAnyRole("USER", "ADMIN")
 
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/resources/**"
-                        ).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/resources/**")
+                        .hasRole("ADMIN")
 
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/resources/**"
-                        ).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/resources/**")
+                        .hasRole("ADMIN")
 
-                        .requestMatchers(
-                                HttpMethod.DELETE,
-                                "/api/resources/**"
-                        ).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/resources/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/reservations")
+                        .hasAnyRole("USER", "ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/reservations/**")
+                        .hasAnyRole("USER", "ADMIN")
 
                         .requestMatchers(
                                 HttpMethod.PATCH,
@@ -97,8 +97,14 @@ public class SecurityConfig {
                         ).hasRole("ADMIN")
 
                         .requestMatchers(
-                                "/api/reservations/**"
-                        ).hasAnyRole("USER", "ADMIN")
+                                HttpMethod.PUT,
+                                "/api/reservations/*"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/reservations/*"
+                        ).hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
