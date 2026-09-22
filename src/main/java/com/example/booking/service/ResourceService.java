@@ -1,22 +1,26 @@
 package com.example.booking.service;
 
+import com.example.booking.dto.ResourcePageResponse;
 import com.example.booking.dto.ResourceRequest;
 import com.example.booking.dto.ResourceResponse;
 import com.example.booking.entity.Resource;
 import com.example.booking.exception.BadRequestException;
 import com.example.booking.exception.ResourceNotFoundException;
 import com.example.booking.repository.ResourceRepository;
+import com.example.booking.util.SortUtil;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ResourceService {
 
-    private static final List<String> ALLOWED_SORT_FIELDS = List.of(
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "id", "name", "type", "available", "pricePerHour"
     );
     private final ResourceRepository resourceRepository;
@@ -39,7 +43,7 @@ public class ResourceService {
         return mapToResponse(savedResource);
     }
 
-    public List<ResourceResponse> getAllResources(int page, int size, String sortBy, String direction) {
+    public ResourcePageResponse getAllResources(int page, int size, String sortBy, String direction) {
         if(page < 0){
             throw new BadRequestException(
                     "Page number must be greater than or equal to 0"
@@ -56,14 +60,22 @@ public class ResourceService {
             );
         }
 
-        Sort sort = createSort(sortBy, direction);
+        Sort sort = SortUtil.buildSort(sortBy, direction, ALLOWED_SORT_FIELDS);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        return resourceRepository.findAll(pageable)
-                .getContent()
+        Page<Resource> resources = resourceRepository.findAll(pageable);
+
+        List<ResourceResponse> content = resources.getContent()
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+        return new ResourcePageResponse(
+                content,
+                resources.getNumber(),
+                resources.getSize(),
+                resources.getTotalElements(),
+                resources.getTotalPages()
+        );
     }
 
     public ResourceResponse getResourceById(Long id) {

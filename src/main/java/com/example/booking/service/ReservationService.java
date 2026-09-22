@@ -14,6 +14,7 @@ import com.example.booking.exception.ResourceNotFoundException;
 import com.example.booking.repository.ReservationRepository;
 import com.example.booking.repository.ResourceRepository;
 import com.example.booking.repository.UserRepository;
+import com.example.booking.util.SortUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -98,27 +99,8 @@ public class ReservationService {
     }
 
     public ReservationPageResponse getAllReservations(String username, boolean isAdmin, int page, int size, ReservationStatus reservationStatus, BigDecimal minPrice, BigDecimal maxPrice, String sortBy, String direction) {
-        if(page < 0) {
-            throw new BadRequestException(
-                    "Page must be greater than or equal to 0"
-            );
-        }
-        if(size < 1) {
-            throw new BadRequestException(
-                    "Page size must be greater than or equal to 1"
-            );
-        }
-        if(minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Minimum price cannot be negative");
-        }
-        if(maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Maximum price cannot be negative");
-        }
-        if(minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
-            throw new BadRequestException("Minimum price cannot be greater than maximum price");
-        }
-
-        Sort sort = createSort(sortBy, direction);
+        validatePaginationAndFilters(page, size, minPrice, maxPrice);
+        Sort sort = SortUtil.buildSort(sortBy, direction, ALLOWED_SORT_FIELDS);
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
@@ -284,35 +266,6 @@ public class ReservationService {
         }
     }
 
-    private Sort createSort(String sortBy, String direction) {
-        if(sortBy == null || sortBy.isBlank()){
-            throw new BadRequestException(
-                    "Sort field is required"
-            );
-        }
-        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
-            throw new BadRequestException(
-                    "Invalid sort field: " + sortBy
-            );
-        }
-
-        if (direction == null || direction.isBlank()) {
-            throw new BadRequestException(
-                    "Sort direction is required"
-            );
-        }
-        Sort.Direction sortDirection;
-
-        try {
-            sortDirection = Sort.Direction.fromString(direction);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException(
-                    "Sort direction must be ASC or DESC"
-            );
-        }
-        return Sort.by(sortDirection, sortBy);
-    }
-
     private BigDecimal calculatePrice(BigDecimal pricePerHour, LocalDateTime startTime, LocalDateTime endTime) {
             long minutes = Duration.between(
                     startTime, endTime
@@ -333,7 +286,40 @@ public class ReservationService {
                     .setScale(2, RoundingMode.HALF_UP);
     }
 
+    private void validatePaginationAndFilters(
+            int page,
+            int size,
+            BigDecimal minPrice,
+            BigDecimal maxPrice) {
 
+        if (page < 0) {
+            throw new BadRequestException(
+                    "Page must be greater than or equal to zero");
+        }
+
+        if (size <= 0) {
+            throw new BadRequestException(
+                    "Size must be greater than zero");
+        }
+
+        if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException(
+                    "Minimum price cannot be negative");
+        }
+
+        if (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException(
+                    "Maximum price cannot be negative");
+        }
+
+        if (minPrice != null
+                && maxPrice != null
+                && minPrice.compareTo(maxPrice) > 0) {
+
+            throw new BadRequestException(
+                    "Minimum price cannot be greater than maximum price");
+        }
+    }
     private ReservationResponse mapToResponse(Reservation reservation) {
         return new ReservationResponse(
                 reservation.getId(),

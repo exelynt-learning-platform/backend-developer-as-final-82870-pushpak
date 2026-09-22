@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -115,6 +116,26 @@ public class ResourceControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void adminShouldBeAbleToGetPaginatedResources() throws Exception {
+
+        String token = adminToken();
+
+        mockMvc.perform(
+                        get("/api/resources")
+                                .param("page", "0")
+                                .param("size", "5")
+                                .param("sortBy", "name")
+                                .param("direction", "asc")
+                                .header("Authorization", "Bearer " + token)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
+    }
 
     @Test
     void adminShouldBeAbleToCreateResource() throws Exception {

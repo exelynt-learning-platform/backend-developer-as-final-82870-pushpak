@@ -1,15 +1,13 @@
 package com.example.booking.controller;
 
+import com.example.booking.dto.ResourcePageResponse;
 import com.example.booking.dto.ResourceRequest;
 import com.example.booking.dto.ResourceResponse;
-import com.example.booking.entity.Resource;
 import com.example.booking.service.ResourceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/resources")
@@ -30,13 +28,13 @@ public class ResourceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ResourceResponse>> getAllResources(
+    public ResponseEntity<ResourcePageResponse> getAllResources(
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "5") int size,
             @RequestParam(required = false, defaultValue = "id") String sortBy,
             @RequestParam(required = false, defaultValue = "ASC") String direction
     ) {
-        List<ResourceResponse> resources = resourceService.getAllResources(page, size, sortBy, direction);
+        ResourcePageResponse resources = resourceService.getAllResources(page, size, sortBy, direction);
         return ResponseEntity.ok(resources);
     }
 
