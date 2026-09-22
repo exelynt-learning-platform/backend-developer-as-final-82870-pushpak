@@ -206,6 +206,22 @@ public class ReservationControllerTest {
     }
 
     @Test
+    void userShouldNotBeAbleToUpdateReservation() throws Exception {
+        String token = userToken();
+
+        mockMvc.perform(put("/api/reservations/1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+    @Test
+    void userShouldNotBeAbleToDeleteReservation() throws Exception {
+        String token = userToken();
+
+        mockMvc.perform(delete("/api/reservations/1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+    @Test
     void userShouldBeAbleToDeleteOwnReservation() throws Exception {
         ResourceResponse resource = createResource();
 
