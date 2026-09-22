@@ -263,32 +263,6 @@ public class ReservationService {
         };
     }
 
-    private Reservation getReservationEntity(Long id, String username, boolean isAdmin) {
-        if(isAdmin) {
-            return reservationRepository.findById(id)
-                    .orElseThrow(() ->
-                            new ReservationNotFoundException(
-                                    "Reservation not found with id: " + id
-
-                            )
-                    );
-        } else {
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() ->
-                            new BadRequestException(
-                                    "Authenticated user not found"
-                            )
-                    );
-
-            return reservationRepository.findByIdAndUserId(id, user.getId())
-                    .orElseThrow(() ->
-                            new ReservationNotFoundException(
-                                    "Reservation not found with id: " + id
-                            )
-                    );
-        }
-    }
-
     private BigDecimal calculatePrice(BigDecimal pricePerHour, LocalDateTime startTime, LocalDateTime endTime) {
             long minutes = Duration.between(
                     startTime, endTime
