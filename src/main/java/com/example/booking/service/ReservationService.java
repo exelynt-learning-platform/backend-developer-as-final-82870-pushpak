@@ -320,7 +320,7 @@ public class ReservationService {
 
             if(minutes <= 0) {
                 throw new BadRequestException(
-                        "Reservation duration must be greater then zero"
+                        "Reservation duration must be greater than zero"
                 );
             }
             BigDecimal hours = BigDecimal.valueOf(minutes)
