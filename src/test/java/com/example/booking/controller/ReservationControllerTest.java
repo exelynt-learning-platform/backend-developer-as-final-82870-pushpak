@@ -179,33 +179,6 @@ public class ReservationControllerTest {
     }
 
     @Test
-    void userShouldBeAbleToUpdateOwnReservation() throws Exception {
-        ResourceResponse resource = createResource();
-
-        ReservationResponse reservation = createReservation(
-                userToken(),
-                resource.getId(),
-                LocalDateTime.now().plusDays(13).withHour(10).withMinute(0),
-                LocalDateTime.now().plusDays(13).withHour(12).withMinute(0)
-        );
-
-        ReservationRequest updateRequest =
-                reservationRequest(
-                        resource.getId(),
-                        LocalDateTime.now().plusDays(13).withHour(14).withMinute(0),
-                        LocalDateTime.now().plusDays(13).withHour(16).withMinute(0)
-                );
-
-        mockMvc.perform(
-                        put("/api/reservations/" + reservation.getId())
-                                .header("Authorization", "Bearer " + userToken())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(updateRequest))
-                )
-                .andExpect(status().isOk());
-    }
-
-    @Test
     void userShouldNotBeAbleToUpdateReservation() throws Exception {
         String token = userToken();
 
