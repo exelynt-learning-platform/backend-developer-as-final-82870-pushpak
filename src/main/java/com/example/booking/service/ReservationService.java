@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -161,12 +162,23 @@ public class ReservationService {
     }
 
     public ReservationResponse updateReservation(Long id, ReservationRequest request, String username, boolean isAdmin) {
+        if(!isAdmin) {
+            throw new AccessDeniedException(
+                    "Only admin can update reservations"
+            );
+        }
+
         if(!request.getEndTime().isAfter(request.getStartTime())) {
             throw new BadRequestException(
                     "End time must be after start time"
             );
         }
-        Reservation reservation = getReservationEntity(id, username, isAdmin);
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() ->
+                        new ReservationNotFoundException(
+                                "Reservation not found with id: " + id
+                        )
+                );
 
         Resource resource = resourceRepository.findById(request.getResourceId())
                 .orElseThrow(() ->
@@ -224,7 +236,17 @@ public class ReservationService {
     }
 
     public void deleteReservation(Long id, String username, boolean isAdmin) {
-        Reservation reservation = getReservationEntity(id, username, isAdmin);
+        if(!isAdmin) {
+            throw new AccessDeniedException(
+                    "Only admin can update reservations"
+            );
+        }
+        Reservation reservation = reservationRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ReservationNotFoundException(
+                                        "Reservation not found with id:" + id
+                                )
+                        );
         reservationRepository.delete(reservation);
     }
 
