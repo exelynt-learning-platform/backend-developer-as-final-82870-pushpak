@@ -238,7 +238,7 @@ public class ReservationService {
     public void deleteReservation(Long id, String username, boolean isAdmin) {
         if(!isAdmin) {
             throw new AccessDeniedException(
-                    "Only admin can update reservations"
+                    "Only administrators can update reservations"
             );
         }
         Reservation reservation = reservationRepository.findById(id)
