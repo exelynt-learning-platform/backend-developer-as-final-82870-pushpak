@@ -5,11 +5,16 @@ import com.example.booking.enums.Role;
 import com.example.booking.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
+@ConditionalOnProperty(
+        name = "app.seed-data",
+        havingValue = "true"
+)
 public class DataInitializer {
 
     private final UserRepository userRepository;

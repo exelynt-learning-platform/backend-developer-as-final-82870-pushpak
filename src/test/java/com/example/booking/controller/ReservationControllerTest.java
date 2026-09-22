@@ -5,6 +5,7 @@ import com.example.booking.enums.ReservationStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -26,6 +27,24 @@ public class ReservationControllerTest {
     private final ObjectMapper objectMapper =
             new ObjectMapper().findAndRegisterModules();
 
+    @Value("${seed.admin.username}")
+    private String adminUsername;
+
+    @Value("${seed.admin.password}")
+    private String adminPassword;
+
+    @Value("${seed.user1.username}")
+    private String user1Username;
+
+    @Value("${seed.user1.password}")
+    private String user1Password;
+
+    @Value("${seed.user2.username}")
+    private String user2Username;
+
+    @Value("${seed.user2.password}")
+    private String user2Password;
+
     private String login(String username, String password) throws Exception {
         LoginRequest request = new LoginRequest(username, password);
         String response = mockMvc.perform(
@@ -42,15 +61,15 @@ public class ReservationControllerTest {
     }
 
     private String adminToken() throws Exception {
-        return login("admin", "Admin@123");
+        return login(adminUsername, adminPassword);
     }
 
     private String userToken() throws Exception {
-        return login("user", "User@123");
+        return login(user1Username, user1Password);
     }
 
     private String user2Token() throws Exception {
-        return login("user2", "User2@123");
+        return login(user2Username, user2Password);
     }
 
     private ResourceResponse createResource() throws Exception {
@@ -63,11 +82,11 @@ public class ReservationControllerTest {
         );
 
         String response = mockMvc.perform(
-                post("/api/resources")
-                        .header("Authorization", "Bearer " + adminToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-        )
+                        post("/api/resources")
+                                .header("Authorization", "Bearer " + adminToken())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -217,9 +236,9 @@ public class ReservationControllerTest {
 
         mockMvc.perform(
                         get("/api/reservations/" + reservation.getId())
-                                .header("Authorization", "Bearer " + userToken())
+                                .header("Authorization", "Bearer " + user2Token())
                 )
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -295,10 +314,6 @@ public class ReservationControllerTest {
                                         new ReservationStatusRequest(ReservationStatus.CONFIRMED)
                                 ))
                 )
-                .andDo(result -> {
-                    System.out.println("STATUS: " + result.getResponse().getStatus());
-                    System.out.println("BODY: " + result.getResponse().getContentAsString());
-                })
                 .andExpect(status().isOk());
 
     }
@@ -322,10 +337,6 @@ public class ReservationControllerTest {
                                         new ReservationStatusRequest(ReservationStatus.CANCELLED)
                                 ))
                 )
-                .andDo(result -> {
-                    System.out.println("STATUS: " + result.getResponse().getStatus());
-                    System.out.println("BODY: " + result.getResponse().getContentAsString());
-                })
                 .andExpect(status().isOk());
     }
 
@@ -344,7 +355,9 @@ public class ReservationControllerTest {
                         patch("/api/reservations/" + reservation.getId() + "/status")
                                 .header("Authorization", "Bearer " + userToken())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"reservationStatus\":\"CONFIRMED\"}")
+                                .content(objectMapper.writeValueAsString(
+                                        new ReservationStatusRequest(ReservationStatus.CONFIRMED)
+                                ))
                 )
                 .andExpect(status().isForbidden());
     }

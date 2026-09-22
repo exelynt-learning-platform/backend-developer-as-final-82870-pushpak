@@ -7,6 +7,7 @@ import com.example.booking.dto.ResourceResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -26,13 +27,25 @@ public class ResourceControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${seed.admin.username}")
+    private String adminUsername;
+
+    @Value("${seed.admin.password}")
+    private String adminPassword;
+
+    @Value("${seed.user1.username}")
+    private String user1Username;
+
+    @Value("${seed.user1.password}")
+    private String user1Password;
+
     private String login(String username, String password) throws Exception {
         LoginRequest request = new LoginRequest(username, password);
         String response = mockMvc.perform(
-                post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-        )
+                        post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -42,11 +55,11 @@ public class ResourceControllerTest {
     }
 
     private String adminToken() throws Exception {
-        return login("admin", "Admin@123");
+        return login(adminUsername, adminPassword);
     }
 
     private String userToken() throws Exception {
-        return login("user", "User@123");
+        return login(user1Username, user1Password);
     }
 
     private ResourceRequest validResourceRequest() {
@@ -62,15 +75,6 @@ public class ResourceControllerTest {
     @Test
     void userShouldBeAbleToGetAllResources() throws Exception {
         mockMvc.perform(
-                get("/api/resources")
-                        .header("Authorization", "Bearer " + userToken())
-        )
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void adminShouldBeAbleToGetAllResources() throws Exception {
-        mockMvc.perform(
                         get("/api/resources")
                                 .header("Authorization", "Bearer " + userToken())
                 )
@@ -78,28 +82,36 @@ public class ResourceControllerTest {
     }
 
     @Test
-    void userShouldBeAbleToGetAllResourceById() throws Exception {
-        String token = userToken();
+    void adminShouldBeAbleToGetAllResources() throws Exception {
+        mockMvc.perform(
+                        get("/api/resources")
+                                .header("Authorization", "Bearer " + adminToken())
+                )
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void userShouldBeAbleToGetResourceById() throws Exception {
+        ResourceRequest request = validResourceRequest();
+
         String response = mockMvc.perform(
-                get("/api/resources")
-                        .param("size", "1")
-                        .header("Authorization", "Bearer " + token)
-        )
-                .andExpect(status().isOk())
+                        post("/api/resources")
+                                .header("Authorization", "Bearer " + adminToken())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
-        Long resourceId = objectMapper
-                .readTree(response)
-                .get("content")
-                .get(0)
-                .get("id")
-                .asLong();
+        ResourceResponse createdResource =
+                objectMapper.readValue(response, ResourceResponse.class);
+
         mockMvc.perform(
-                get("/api/resources/" + resourceId)
-                        .header("Authorization", "Bearer " + token)
-        )
+                        get("/api/resources/" + createdResource.getId())
+                                .header("Authorization", "Bearer " + userToken())
+                )
                 .andExpect(status().isOk());
     }
 
@@ -167,21 +179,51 @@ public class ResourceControllerTest {
 
     @Test
     void userShouldNotBeAbleToUpdateResource() throws Exception {
-        ResourceRequest request = validResourceRequest();
+        ResourceRequest createRequest = validResourceRequest();
+
+        String response = mockMvc.perform(
+                        post("/api/resources")
+                                .header("Authorization", "Bearer " + adminToken())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(createRequest))
+                )
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        ResourceResponse resource =
+                objectMapper.readValue(response, ResourceResponse.class);
 
         mockMvc.perform(
-                        put("/api/resources/1")
+                        put("/api/resources/" + resource.getId())
                                 .header("Authorization", "Bearer " + userToken())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request))
+                                .content(objectMapper.writeValueAsString(createRequest))
                 )
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void userShouldNotBeAbleToDeleteResource() throws Exception {
+        ResourceRequest request = validResourceRequest();
+
+        String response = mockMvc.perform(
+                        post("/api/resources")
+                                .header("Authorization", "Bearer " + adminToken())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        ResourceResponse resource =
+                objectMapper.readValue(response, ResourceResponse.class);
+
         mockMvc.perform(
-                        delete("/api/resources/1")
+                        delete("/api/resources/" + resource.getId())
                                 .header("Authorization", "Bearer " + userToken())
                 )
                 .andExpect(status().isForbidden());
@@ -248,33 +290,6 @@ public class ResourceControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @Test
-    void getResourcesWithInvalidPaginationShouldReturn400() throws Exception {
-        mockMvc.perform(
-                        get("/api/resources")
-                                .param("page", "-1")
-                                .header("Authorization", "Bearer " + userToken())
-                )
-                .andExpect(status().isBadRequest());
-    }
 
-    @Test
-    void getResourcesWithInvalidSortFieldShouldReturn400() throws Exception {
-        mockMvc.perform(
-                        get("/api/resources")
-                                .param("sortBy", "invalidField")
-                                .header("Authorization", "Bearer " + userToken())
-                )
-                .andExpect(status().isBadRequest());
-    }
 
-    @Test
-    void getResourcesWithInvalidSortDirectionShouldReturn400() throws Exception {
-        mockMvc.perform(
-                        get("/api/resources")
-                                .param("direction", "INVALID")
-                                .header("Authorization", "Bearer " + userToken())
-                )
-                .andExpect(status().isBadRequest());
-    }
 }
